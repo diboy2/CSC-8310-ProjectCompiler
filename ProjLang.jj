@@ -1,0 +1,229 @@
+/* JavaCC file for csc8310 project language */
+// Do not modify the options below.
+options {
+    LOOKAHEAD = 2;
+    STATIC = false;
+    OUTPUT_DIRECTORY = "output";
+    FORCE_LA_CHECK = true;
+}
+// colon possibly
+// Do not change the name of parser/class below.
+PARSER_BEGIN(ProjLangParser)
+
+public class ProjLangParser {
+      // Do not add anything here.
+      // Generated parser code gets inserted here.
+}
+
+PARSER_END(ProjLangParser)
+
+// Add your lexer rules here.
+SKIP:
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+}
+
+/* Operators */
+TOKEN:
+{
+  <ADD: "+">
+| <SUB: "-">
+| <MUL: "*">
+| <DIV: "/">
+| <OR: "|">
+| <AND: "&">
+| <EQUALS: "=">
+| <LESS_THAN: "<">
+| <NOT: "!">
+| <TRUE: "true">
+| <FALSE: "false">
+| <IF: "if">
+| <THEN: "then">
+| <ELSE: "else">
+| <LET: "let">
+| <VAL: "val">
+| <IN: "in">
+| <END: "end">
+| <FUN: "fun">
+| <WHILE: "while">
+| <DO: "do">
+}
+
+
+/* Other */
+TOKEN :
+{
+  <LPAR: "(">
+| <RPAR: ")">
+| <LCURL: "{">
+| <RCURL: "}">
+| <ASSIGN: ":=">
+| <SEMICOLON: ";">
+}
+TOKEN :
+{
+  < ID: ["a"-"z","A"-"Z"] ( ["a"-"z","A"-"Z","0"-"9"] )* >
+}
+
+TOKEN :
+{
+  < NUM: ( ["0"-"9"] )+ >
+}
+
+// Complete the rule for input() below
+// and add rest of the parser rules
+// following it.
+
+Expr input(): {
+  Expr e;
+} { e = expr() <SEMICOLON> { return e; }} // complete the rule and do not change the return type
+
+// Add rest of the parser rules here
+
+Expr expr(): {
+  Expr e;
+} {
+  e = ifExp() { return e; }
+| e = letvalExp() { return e; }
+| e = letfunExp() { return e; }
+| e = whileExp() { return e; }
+| e = seqExp() { return e; }
+| e = assnExp() { return e; }
+| e = notExp() { return e; }
+| e = relExp() { return e; }
+}
+
+Expr ifExp(): {
+  Expr e1;
+  Expr e2;
+  Expr e3;
+} {
+  <IF> e1 = expr() <THEN> e2 = expr() <ELSE>  e3 = expr()
+    { return new IfExp(e1, e2, e3); }
+}
+
+Expr letvalExp(): {
+  String id;
+  Expr e1;
+  Expr e2;
+} {
+  <LET>
+  <VAL>
+  <ID> { id = token.image; }
+  <EQUALS> e1 = expr()
+  <IN> e2 = expr() <END>
+  { return new LetValExp(id, e1, e2); }
+}
+
+Expr letfunExp(): {
+  String id;
+  String param;
+  Expr e1;
+  Expr e2;
+} {
+  <LET>
+  <FUN>
+  <ID> { id = token.image; }
+  <LPAR> <ID> { param = token.image; } <RPAR>
+  <EQUALS> e1 = expr() <IN> e2 = expr() <END>
+  { return new LetFunExp(id, param, e1, e2); }
+}
+
+Expr whileExp(): {
+  Expr e1;
+  Expr e2;
+} {
+  <WHILE> e1 = expr() <DO> e2 = expr()
+  { return new WhileExp(e1, e2); }
+}
+
+Expr seqExp(): {
+  Expr e1;
+  Expr e2;
+} {
+  <LCURL>
+  e1 = expr()
+  ( <SEMICOLON> e2 = expr() { e1 = new SeqExp(e1, e2); } )*
+  <RCURL>
+  { return e1; }
+}
+
+Expr notExp(): {
+  Expr e;
+} {
+  <NOT> e = expr()
+    { return new NotExp(e); }
+}
+
+Expr assnExp(): {
+  String id;
+  Expr e;
+} {
+    <ID> { id = token.image; }
+    <ASSIGN> e = expr()
+    { return new AssnExp(id, e); }
+}
+
+Expr relExp(): {
+  BinOp binOp;
+  Expr e1;
+  Expr e2;
+} {
+  e1 = arithExp() (
+    binOp = relOp() e2 = arithExp()
+      { e1 = new BinExp(binOp, e1, e2); }
+  )? { return e1; }
+}
+
+BinOp relOp(): {} {
+  <LESS_THAN> { return BinOp.LT; }
+| <EQUALS> { return BinOp.EQ; }
+}
+
+Expr arithExp(): {
+  BinOp binOp;
+  Expr e1;
+  Expr e2;
+} {
+  e1 = term() (
+    binOp = addOp() e2 = term()
+      { e1 = new BinExp(binOp, e1, e2); }
+  )* { return e1; }
+}
+
+BinOp addOp(): {} {
+  <ADD> { return BinOp.PLUS; }
+| <SUB> { return BinOp.MINUS; }
+| <OR> { return BinOp.OR; }
+}
+
+Expr term(): {
+  BinOp binOp;
+  Expr e1;
+  Expr e2;
+} {
+  e1 = factor() (
+    binOp = mulOp() e2 = factor()
+      { e1 = new BinExp(binOp, e1, e2); }
+  )* { return e1; }
+}
+
+BinOp mulOp(): {} {
+  <MUL> { return BinOp.TIMES; }
+| <DIV> { return BinOp.DIV; }
+| <AND> { return BinOp.AND; }
+}
+
+Expr factor(): {
+  Expr exp;
+  String id;
+} { <NUM> { exp = new IntConst(Integer.parseInt(token.image)); } { return exp; }
+| <TRUE> { exp = new BoolConst(Boolean.parseBoolean(token.image)); } { return exp; }
+| <FALSE> { exp = new BoolConst(Boolean.parseBoolean(token.image)); } { return exp; }
+| <ID> { id = token.image; } <LPAR> exp = expr() <RPAR> { return new AppExp(id, exp); }
+| <ID> { exp = new VarExp(token.image); } { return exp; }
+| <LPAR> exp = expr() <RPAR> { return exp; }
+}
